@@ -1,0 +1,12 @@
+# بيانات التشغيل / runtime data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# بايثون / python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
