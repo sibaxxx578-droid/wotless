@@ -6,6 +6,7 @@
 """
 import asyncio
 import logging
+import os
 import sys
 
 from aiogram import Bot, Dispatcher
@@ -53,6 +54,29 @@ async def setup_commands(bot: Bot):
             pass  # الأدمن ما فتح البوت بعد
 
 
+async def start_port_listener(bot: Bot):
+    """بعض منصات النشر تشترط منفذ مفتوح — نشغّل سيرفر HTTP خفيف إذا كان PORT مضبوطاً."""
+    port = os.getenv("PORT")
+    if not port:
+        return
+    try:
+        from aiohttp import web
+
+        async def health(_request):
+            return web.Response(text="bot is running ✅")
+
+        app = web.Application()
+        app.router.add_get("/", health)
+        app.router.add_get("/health", health)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", int(port))
+        await site.start()
+        log.info("HTTP health listener on 0.0.0.0:%s", port)
+    except Exception as e:
+        log.warning("port listener failed: %s", e)
+
+
 async def main() -> int:
     db.init()
     emojis.init()
@@ -93,6 +117,7 @@ async def main() -> int:
         log.warning("delete_webhook failed: %s", e)
 
     await setup_commands(bot)
+    await start_port_listener(bot)
 
     # حلقة إعادة المحاولة عند انقطاع الشبكة أو تعارض نسخة أخرى تعمل بنفس التوكن
     while True:
